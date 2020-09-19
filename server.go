@@ -52,7 +52,7 @@ func PairDeviceHandler(w http.ResponseWriter, r *http.Request) {
 		log.Fatal(err)
 	}
 
-	_, err = db.Exec("INSERT INTO pair VALUES($1,$2);", p.DeviceID, p.UserID)
+	_, err = db.Exec("INSERT INTO pairs VALUES($1,$2);", p.DeviceID, p.UserID)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		json.NewEncoder(w).Encode(err.Error())
