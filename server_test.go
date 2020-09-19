@@ -18,7 +18,11 @@ func TestPairDeviceHandler(t *testing.T) {
 	req := httptest.NewRequest(http.MethodPost, "/pair-device", payload)
 	rec := httptest.NewRecorder()
 
-	PairDeviceHandler(rec, req)
+	handler := PairDeviceHandler{func(p Pair) error {
+		return nil
+	}}
+
+	handler.ServeHTTP(rec, req)
 
 	if http.StatusOK != rec.Code {
 		t.Error("Expect 200 OK but got ", rec.Code)
