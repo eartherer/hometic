@@ -64,7 +64,7 @@ type Device interface {
 type CreatePairDeviceFunc func(p Pair) error
 
 func (fn CreatePairDeviceFunc) Pair(p Pair) error {
-	return fn.Pair(p)
+	return fn(p)
 }
 
 func createPairDeviceFunc(p Pair) error {
