@@ -47,7 +47,7 @@ func PairDeviceHandler(device Device) http.HandlerFunc {
 
 		defer r.Body.Close()
 		fmt.Printf("pair %#v\n", p)
-		device.Pair(p)
+		err = device.Pair(p)
 		if err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
 			json.NewEncoder(w).Encode(err.Error())
