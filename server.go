@@ -27,6 +27,7 @@ func main() {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			l := zap.NewExample()
 			l = l.With(zap.Namespace("hometic"), zap.String("I'm", "gopher"))
+			l.Info("PairDevice")
 			next.ServeHTTP(w, r)
 		})
 	})
@@ -47,7 +48,6 @@ func main() {
 
 func PairDeviceHandler(device Device) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		l.Info("PairDevice")
 
 		var p Pair
 		err := json.NewDecoder(r.Body).Decode(&p)
