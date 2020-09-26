@@ -1,17 +1,16 @@
 package main
 
 import (
-	"context"
 	"database/sql"
 	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
 	"os"
+	"server/hometic/zaplogger"
 
 	"github.com/gorilla/mux"
 	_ "github.com/lib/pq"
-	"go.uber.org/zap"
 )
 
 type Pair struct {
@@ -24,18 +23,8 @@ func main() {
 	fmt.Println("This is hometic")
 
 	r := mux.NewRouter()
-	r.Use(func(next http.Handler) http.Handler {
-		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			l := zap.NewExample()
-			l = l.With(zap.Namespace("hometic"), zap.String("I'm", "gopher"))
-			l.Info("PairDevice")
-			ctx := context.WithValue(r.Context(), "logger", l)
-
-			next.ServeHTTP(w, r.WithContext(ctx))
-		})
-	})
-
-	r.Handle("/pair-device", PairDeviceHandler(CreatePairDeviceFunc(createPairDeviceFunc))).Methods(http.MethodPost)
+	r.Use(zaplogger.Middleware)
+	r.Handle("/pair-device", CustomHandlerFunc(PairDeviceHandler(CreatePairDeviceFunc(createPairDeviceFunc)))).Methods(http.MethodPost)
 
 	addr := fmt.Sprintf("0.0.0.0:%s", os.Getenv("PORT"))
 	fmt.Println("addr: ", addr)
@@ -49,14 +38,34 @@ func main() {
 	log.Fatal(server.ListenAndServe())
 }
 
-func PairDeviceHandler(device Device) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		r.Context().Value("logger").(*zap.Logger).Info("pair-device")
+type CustomHandlerFunc func(w CustomResponseWriter, r *http.Request)
+
+func (handler CustomHandlerFunc) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	handler(&JSONResponseWriter{w}, r)
+}
+
+type CustomResponseWriter interface {
+	http.ResponseWriter
+	JSON(statusCode int, data interface{})
+}
+type JSONResponseWriter struct {
+	http.ResponseWriter
+}
+
+func (w *JSONResponseWriter) JSON(statusCode int, data interface{}) {
+	w.Header().Set("content-type", "application/json")
+	json.NewEncoder(w).Encode(data)
+}
+
+func PairDeviceHandler(device Device) func(w CustomResponseWriter, r *http.Request) {
+	return func(w CustomResponseWriter, r *http.Request) {
+		zaplogger.L(r.Context()).Info("pair-device")
+		//r.Context().Value("logger").(*zap.Logger).Info("pair-device")
+
 		var p Pair
 		err := json.NewDecoder(r.Body).Decode(&p)
 		if err != nil {
-			w.WriteHeader(http.StatusBadRequest)
-			json.NewEncoder(w).Encode(err.Error())
+			w.JSON(http.StatusBadRequest, err.Error())
 			return
 		}
 
@@ -64,11 +73,11 @@ func PairDeviceHandler(device Device) http.HandlerFunc {
 		fmt.Printf("pair %#v\n", p)
 		err = device.Pair(p)
 		if err != nil {
-			w.WriteHeader(http.StatusInternalServerError)
-			json.NewEncoder(w).Encode(err.Error())
+			w.JSON(http.StatusInternalServerError, err.Error())
 			return
 		}
-		w.Write([]byte(`{"status":"active"}`))
+		w.JSON(http.StatusOK, map[string]interface{}{"status": "active"})
+		return
 	}
 }
 
