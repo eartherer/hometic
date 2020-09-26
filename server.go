@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"database/sql"
 	"encoding/json"
 	"fmt"
@@ -28,7 +29,9 @@ func main() {
 			l := zap.NewExample()
 			l = l.With(zap.Namespace("hometic"), zap.String("I'm", "gopher"))
 			l.Info("PairDevice")
-			next.ServeHTTP(w, r)
+			ctx := context.WithValue(r.Context(), "logger", l)
+
+			next.ServeHTTP(w, r.WithContext(ctx))
 		})
 	})
 
@@ -48,7 +51,7 @@ func main() {
 
 func PairDeviceHandler(device Device) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-
+		r.Context().Value("logger").(*zap.Logger).Info("pair-device")
 		var p Pair
 		err := json.NewDecoder(r.Body).Decode(&p)
 		if err != nil {
