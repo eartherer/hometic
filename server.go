@@ -23,6 +23,14 @@ func main() {
 	fmt.Println("This is hometic")
 
 	r := mux.NewRouter()
+	r.Use(func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			l := zap.NewExample()
+			l = l.With(zap.Namespace("hometic"), zap.String("I'm", "gopher"))
+			next.ServeHTTP(w, r)
+		})
+	})
+
 	r.Handle("/pair-device", PairDeviceHandler(CreatePairDeviceFunc(createPairDeviceFunc))).Methods(http.MethodPost)
 
 	addr := fmt.Sprintf("0.0.0.0:%s", os.Getenv("PORT"))
@@ -39,9 +47,6 @@ func main() {
 
 func PairDeviceHandler(device Device) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-
-		l := zap.NewExample()
-		l = l.With(zap.Namespace("hometic"), zap.String("I'm", "gopher"))
 		l.Info("PairDevice")
 
 		var p Pair
